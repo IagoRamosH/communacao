@@ -1,7 +1,13 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import api from "../services/api";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 
 function Login() {
+  const { login } = useContext(AuthContext);
+  const navigate = useNavigate();
+
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -16,23 +22,22 @@ function Login() {
     });
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!form.email || !form.password) {
-      setError("Preencha todos os campos.");
-      return;
+    try {
+      const response = await api.post("/auth/login", form);
+
+      login(response.data.user, response.data.token);
+
+      navigate("/");
+
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+          "Erro ao entrar"
+      );
     }
-
-    if (!form.email.includes("@")) {
-      setError("Email inválido.");
-      return;
-    }
-
-    setError("");
-
-    // 🔥 Aqui futuramente entra API
-    console.log("Login enviado:", form);
   }
 
   return (
@@ -69,7 +74,9 @@ function Login() {
           </div>
 
           {error && (
-            <p className="text-red-500 text-sm">{error}</p>
+            <p className="text-red-500 text-sm">
+              {error}
+            </p>
           )}
 
           <button className="w-full bg-pink-600 text-white py-2 rounded-lg">

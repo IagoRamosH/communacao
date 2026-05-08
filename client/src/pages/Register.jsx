@@ -1,7 +1,13 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import api from "../services/api";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 
 function Register() {
+  const { login } = useContext(AuthContext);
+  const navigate = useNavigate();
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -17,23 +23,23 @@ function Register() {
     });
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!form.name || !form.email || !form.password) {
-      setError("Preencha todos os campos.");
-      return;
+    try {
+      const response = await api.post("/auth/register", form);
+
+      login(response.data.user, response.data.token);
+
+      // redirecionar
+      navigate("/");
+
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+          "Erro ao cadastrar"
+      );
     }
-
-    if (form.password.length < 6) {
-      setError("Senha deve ter pelo menos 6 caracteres.");
-      return;
-    }
-
-    setError("");
-
-    // 🔥 Futuro: integração com backend
-    console.log("Cadastro enviado:", form);
   }
 
   return (
@@ -79,7 +85,9 @@ function Register() {
           </div>
 
           {error && (
-            <p className="text-red-500 text-sm">{error}</p>
+            <p className="text-red-500 text-sm">
+              {error}
+            </p>
           )}
 
           <button className="w-full bg-pink-600 text-white py-2 rounded-lg">
