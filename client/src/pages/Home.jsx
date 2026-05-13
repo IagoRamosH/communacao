@@ -4,26 +4,31 @@ import Hero from "../components/Hero";
 import SearchBar from "../components/SearchBar";
 import EventCard from "../components/EventCard";
 import Footer from "../components/Footer";
+import { useEffect, useState } from "react";
+import api from "../services/api";
 
 function Home() {
-  const events = [
-    {
-      title: "Campanha do Agasalho",
-      date: "12 Abril 2026",
-      location: "Campina Grande",
-      description: "Arrecadação de roupas para famílias carentes.",
-      org: "Instituto Solidariedade",
-      category: "Doação",
-    },
-    {
-      title: "Doação de Alimentos",
-      date: "20 Abril 2026",
-      location: "João Pessoa",
-      description: "Distribuição de alimentos para comunidades.",
-      org: "ONG Alimentar",
-      category: "Voluntariado",
-    },
-  ];
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchEvents() {
+      try {
+        const response = await api.get("/events");
+        setEvents(response.data);
+      } catch (error) {
+        console.error("Erro ao buscar eventos", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchEvents();
+  }, []);
+
+  if (loading) {
+    return <p className="p-8">Carregando eventos...</p>;
+  }
 
   return (
     <>
@@ -32,18 +37,14 @@ function Home() {
       <Hero />
       <SearchBar />
 
-      <section className="px-8 py-10 text-sm">
-        <p className="text-gray-500 mb-4">
-          Mostrando {events.length} eventos
-        </p>
-
-        <h3 className="text-lg font-semibold mb-4">
+      <section className="px-8 py-10">
+        <h3 className="text-2xl font-bold mb-6">
           Eventos em destaque
         </h3>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.map((event, index) => (
-            <EventCard key={index} {...event} />
+          {events.map((event) => (
+            <EventCard key={event._id} {...event} />
           ))}
         </div>
       </section>

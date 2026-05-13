@@ -4,6 +4,8 @@ import MeusEventos from "../pages/MeusEventos";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import PrivateRoute from "./PrivateRoute";
+import EventDetails from "../pages/EventDetails";
+import CreateEvent from "../pages/CreateEvent";
 
 function AppRoutes() {
   return (
@@ -20,6 +22,8 @@ function AppRoutes() {
             </PrivateRoute>
           }
         />
+        <Route path="/evento/:id" element={<EventDetails />} />
+        <Route path="/cadastrar-evento" element={<CreateEvent />} />
       </Routes>
     </BrowserRouter>
   );

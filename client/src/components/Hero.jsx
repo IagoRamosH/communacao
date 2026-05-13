@@ -1,10 +1,10 @@
 function Hero() {
   return (
     <section
-      className="h-[250px] flex items-center justify-center text-white text-center bg-cover bg-center"
+      className="h-[350px] flex items-center justify-center text-white text-center bg-cover bg-center"
       style={{
         backgroundImage:
-          "url('https://images.unsplash.com/photo-1529156069898-49953e39b3ac')",
+          "url('https://plus.unsplash.com/premium_photo-1733306621909-1d63c088a93e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OXx8ZG9hJUMzJUE3JUMzJUEzbyUyMGRlJTIwY2FyaWRhZGV8ZW58MHx8MHx8fDA%3D')",
       }}
     >
       <div className="bg-black/40 w-full h-full flex items-center justify-center">

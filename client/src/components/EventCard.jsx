@@ -1,8 +1,13 @@
 import { FaCalendarAlt, FaMapMarkerAlt, FaUser } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
-function EventCard({ title, date, location, org, description, category }) {
+function EventCard({ _id, title, date, location, org, description, category }) {
+  const navigate = useNavigate();
+
   return (
-    <div className="bg-white rounded-xl shadow-sm p-5 border">
+    <div
+      onClick={() => navigate(`/evento/${_id}`)}
+        className="bg-white rounded-xl shadow-sm p-5 border cursor-pointer hover:shadow-md transition">
       
       <div className="flex justify-between items-start mb-2">
         <h4 className="text-base font-semibold">{title}</h4>

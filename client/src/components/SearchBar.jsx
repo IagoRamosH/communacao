@@ -1,6 +1,9 @@
 import { FaSearch } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 function SearchBar() {
+const navigate = useNavigate();
+
   return (
     <div className="px-8 -mt-8">
       <div className="bg-white shadow-md rounded-xl p-4 flex items-center gap-4 flex-nowrap overflow-x-auto">
@@ -24,8 +27,11 @@ function SearchBar() {
         </select>
 
         {/* Botão */}
-        <button className="bg-pink-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap hover:bg-pink-700">
-          + Cadastrar Evento
+        <button
+          onClick={() => navigate("/cadastrar-evento")}
+          className="bg-pink-600 text-white px-4 py-2 rounded-lg"
+        >
+          Cadastrar Evento
         </button>
 
       </div>
