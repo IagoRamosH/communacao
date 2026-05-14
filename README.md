@@ -72,4 +72,4 @@ Criar uma solução digital que incentive a participação social, facilite a or
 
 ## 👨‍💻 Autor
 
-Desenvolvido por você como parte de um projeto prático de desenvolvimento full stack.
+Desenvolvido por John Annyskier, Iago Jose Ramos e joão Ricardo Schmidt como parte de um projeto prático de desenvolvimento full stack.
