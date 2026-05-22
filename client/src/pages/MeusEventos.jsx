@@ -1,46 +1,53 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "../components/Header";
 import Navbar from "../components/Navbar";
 import EventCard from "../components/EventCard";
+import api from "../services/api";
 
 function MeusEventos() {
   const [activeTab, setActiveTab] = useState("participando");
 
-  // Mock - eventos que o usuário participa
-  const participando = [
-    {
-      title: "Mutirão de Saúde",
-      date: "20 Abril 2026",
-      location: "João Pessoa",
-      description: "Atendimento médico gratuito.",
-      org: "Prefeitura",
-      category: "Ajuda Humanitária",
-    },
-    {
-      title: "Limpeza de Praias",
-      date: "25 Abril 2026",
-      location: "Recife",
-      description: "Ação ambiental com voluntários.",
-      org: "EcoBrasil",
-      category: "Evento Regional",
-    },
-  ];
+  const [createdEvents, setCreatedEvents] = useState([]);
+  const [participatingEvents, setParticipatingEvents] = useState([]);
 
-  // Mock - eventos criados pelo usuário
-  const criados = [
-    {
-      title: "Campanha do Agasalho",
-      date: "12 Abril 2026",
-      location: "Campina Grande",
-      description: "Arrecadação de roupas para famílias carentes.",
-      org: "Instituto Solidariedade",
-      category: "Doação",
-    },
-  ];
+  const [loading, setLoading] = useState(true);
 
-  // Alterna lista conforme aba
+  useEffect(() => {
+    async function fetchMyEvents() {
+      try {
+        const token = localStorage.getItem("token");
+
+        // 🔹 EVENTOS CRIADOS PELO USUÁRIO
+        const createdRes = await api.get("/events/my-events", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (Array.isArray(createdRes.data)) {
+          setCreatedEvents(createdRes.data);
+        } else {
+          setCreatedEvents([]);
+        }
+
+        // 🔹 PARTICIPANDO (ainda não implementado no backend)
+        setParticipatingEvents([]);
+
+      } catch (error) {
+        console.error("Erro ao buscar meus eventos", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchMyEvents();
+  }, []);
+
+  // 🔁 Alterna entre abas
   const eventos =
-    activeTab === "participando" ? participando : criados;
+    activeTab === "participando"
+      ? participatingEvents
+      : createdEvents;
 
   return (
     <>
@@ -79,17 +86,31 @@ function MeusEventos() {
           </button>
         </div>
 
-        {/* Mensagem caso não tenha eventos */}
-        {eventos.length === 0 && (
+        {/* LOADING */}
+        {loading && (
+          <p className="text-gray-500">
+            Carregando seus eventos...
+          </p>
+        )}
+
+        {/* SEM EVENTOS */}
+        {!loading && eventos.length === 0 && (
           <p className="text-gray-500">
             Nenhum evento encontrado.
           </p>
         )}
 
-        {/* Grid de eventos */}
+        {/* GRID */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {eventos.map((event, index) => (
-            <EventCard key={index} {...event} />
+          {eventos.map((event) => (
+            <EventCard
+              key={event._id}
+              id={event._id} // 🔥 essencial para abrir detalhes
+              title={event.title}
+              date={event.startDate || event.date}
+              location={event.location}
+              image={event.image}
+            />
           ))}
         </div>
 

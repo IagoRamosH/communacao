@@ -14,10 +14,19 @@ function Home() {
   useEffect(() => {
     async function fetchEvents() {
       try {
+        // ✅ CORREÇÃO AQUI (rota com /api)
         const response = await api.get("/events");
-        setEvents(response.data);
+
+        // segurança caso não venha array
+        if (Array.isArray(response.data)) {
+          setEvents(response.data);
+        } else {
+          setEvents([]);
+        }
+
       } catch (error) {
         console.error("Erro ao buscar eventos", error);
+        setEvents([]);
       } finally {
         setLoading(false);
       }
@@ -27,7 +36,13 @@ function Home() {
   }, []);
 
   if (loading) {
-    return <p className="p-8">Carregando eventos...</p>;
+    return (
+      <>
+        <Header />
+        <Navbar />
+        <p className="p-8 text-center">Carregando eventos...</p>
+      </>
+    );
   }
 
   return (
@@ -38,15 +53,33 @@ function Home() {
       <SearchBar />
 
       <section className="px-8 py-10">
-        <h3 className="text-2xl font-bold mb-6">
+
+        <h3 className="text-xl font-semibold mb-6 text-gray-800">
           Eventos em destaque
         </h3>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.map((event) => (
-            <EventCard key={event._id} {...event} />
-          ))}
-        </div>
+        {/* 🔥 SE NÃO TIVER EVENTOS */}
+        {events.length === 0 ? (
+          <p className="text-gray-500 text-center">
+            Nenhum evento encontrado.
+          </p>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {events.map((event) => (
+            <EventCard
+              key={event._id}
+              _id={event._id} // ✅ CORRETO
+              title={event.title}
+              date={event.startDate || event.date}
+              location={event.location}
+              org={event.organizer}
+              description={event.description}
+              category={event.category}
+            />
+            ))}
+          </div>
+        )}
+
       </section>
 
       <Footer />

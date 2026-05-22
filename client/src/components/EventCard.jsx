@@ -6,7 +6,7 @@ function EventCard({ _id, title, date, location, org, description, category }) {
 
   return (
     <div
-      onClick={() => navigate(`/evento/${_id}`)}
+      onClick={() => navigate(`/event/${_id}`)}
         className="bg-white rounded-xl shadow-sm p-5 border cursor-pointer hover:shadow-md transition">
       
       <div className="flex justify-between items-start mb-2">

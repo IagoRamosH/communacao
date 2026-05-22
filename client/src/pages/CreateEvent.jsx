@@ -1,7 +1,7 @@
 import Header from "../components/Header";
 import Navbar from "../components/Navbar";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
   FaArrowLeft,
@@ -10,22 +10,73 @@ import {
   FaTag,
   FaUser,
   FaBullseye,
-  FaUsers
+  FaUsers,
+  FaChartLine
 } from "react-icons/fa";
 
-import {
-  MdEmail,
-  MdDescription
-} from "react-icons/md";
-
-import { FaChartLine } from "react-icons/fa";
+import { MdEmail, MdDescription } from "react-icons/md";
 
 import api from "../services/api";
 
 function CreateEvent() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEdit = Boolean(id);
 
-  const [form, setForm] = useState({});
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    category: "",
+    location: "",
+    organizer: "",
+    startDate: "",
+    endDate: "",
+    goal: "",
+    goalType: "",
+    goalTotal: "",
+    goalCurrent: "",
+    goalUnit: "",
+    volunteers: "",
+    volunteerProfile: "",
+    email: "",
+    phone: "",
+    whatsapp: ""
+  });
+
+  useEffect(() => {
+    if (isEdit) {
+      async function loadEvent() {
+        try {
+          const res = await api.get(`/events/${id}`);
+          const data = res.data;
+
+          setForm({
+            title: data.title || "",
+            description: data.description || "",
+            category: data.category || "",
+            location: data.location || "",
+            organizer: data.organizer || "",
+            startDate: data.startDate?.slice(0, 10) || "",
+            endDate: data.endDate?.slice(0, 10) || "",
+            goal: data.goal || "",
+            goalType: data.goalType || "",
+            goalTotal: data.goalTotal || "",
+            goalCurrent: data.goalCurrent || "",
+            goalUnit: data.goalUnit || "",
+            volunteers: data.volunteers || "",
+            volunteerProfile: data.volunteerProfile || "",
+            email: data.email || "",
+            phone: data.phone || "",
+            whatsapp: data.whatsapp || ""
+          });
+        } catch (error) {
+          console.error("Erro ao carregar evento", error);
+        }
+      }
+
+      loadEvent();
+    }
+  }, [id, isEdit]);
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -35,17 +86,36 @@ function CreateEvent() {
     e.preventDefault();
 
     try {
-      await api.post("/events", {
-        title: form.title,
-        description: form.description,
-        category: form.category,
-        location: form.location,
-        date: form.startDate,
-      });
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        alert("Você precisa estar logado");
+        return;
+      }
+
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      };
+
+      const payload = {
+        ...form,
+        goalTotal: Number(form.goalTotal) || 0,
+        goalCurrent: Number(form.goalCurrent) || 0,
+        volunteers: Number(form.volunteers) || 0,
+      };
+
+      if (isEdit) {
+        await api.put(`/events/${id}`, payload, config);
+      } else {
+        await api.post("/events", payload, config);
+      }
 
       navigate("/");
     } catch (error) {
-      console.error(error);
+      console.error("Erro ao salvar evento:", error.response?.data || error);
+      alert("Erro ao salvar evento");
     }
   }
 
@@ -61,14 +131,11 @@ function CreateEvent() {
 
         {/* HEADER */}
         <div className="flex items-center gap-3 mb-6">
-          <FaArrowLeft
-            className="cursor-pointer"
-            onClick={() => navigate("/")}
-          />
+          <FaArrowLeft className="cursor-pointer" onClick={() => navigate("/")} />
 
           <div>
             <h1 className="text-2xl font-bold">
-              Cadastrar Novo Evento
+              {isEdit ? "Editar Evento" : "Cadastrar Novo Evento"}
             </h1>
             <p className="text-gray-500 text-sm">
               Preencha os dados para criar um evento comunitário
@@ -93,10 +160,9 @@ function CreateEvent() {
                 </label>
                 <input
                   name="title"
-                  placeholder="Ex: Campanha de Arrecadação de Alimentos"
-                  className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
+                  value={form.title}
                   onChange={handleChange}
-                  required
+                  className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
                 />
               </div>
 
@@ -106,11 +172,11 @@ function CreateEvent() {
                 </label>
                 <select
                   name="category"
-                  className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
+                  value={form.category}
                   onChange={handleChange}
-                  required
+                  className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
                 >
-                  <option value="">Selecione a categoria</option>
+                  <option value="">Selecione</option>
                   <option>Doação</option>
                   <option>Ajuda Humanitária</option>
                   <option>Evento Regional</option>
@@ -125,8 +191,9 @@ function CreateEvent() {
                   <input
                     type="date"
                     name="startDate"
-                    className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
+                    value={form.startDate}
                     onChange={handleChange}
+                    className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
                   />
                 </div>
 
@@ -137,8 +204,9 @@ function CreateEvent() {
                   <input
                     type="date"
                     name="endDate"
-                    className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
+                    value={form.endDate}
                     onChange={handleChange}
+                    className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
                   />
                 </div>
               </div>
@@ -149,9 +217,9 @@ function CreateEvent() {
                 </label>
                 <input
                   name="location"
-                  placeholder="Ex: Centro Comunitário"
-                  className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
+                  value={form.location}
                   onChange={handleChange}
+                  className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
                 />
               </div>
 
@@ -161,9 +229,9 @@ function CreateEvent() {
                 </label>
                 <input
                   name="organizer"
-                  placeholder="Nome da instituição ou pessoa"
-                  className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
+                  value={form.organizer}
                   onChange={handleChange}
+                  className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
                 />
               </div>
 
@@ -178,168 +246,85 @@ function CreateEvent() {
 
             <textarea
               name="description"
-              rows="4"
-              placeholder="Descreva o evento, objetivos, horários, etc."
-              className="w-full p-3 bg-gray-100 rounded-lg"
+              value={form.description}
               onChange={handleChange}
+              rows="4"
+              className="w-full p-3 bg-gray-100 rounded-lg"
             />
           </div>
 
-          {/* OBJETIVO E META */}
+          {/* OBJETIVO */}
           <div className="bg-white border rounded-xl p-6 shadow-sm">
-            <h2 className="font-semibold">Objetivo e Meta do Evento</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Defina metas e propósito do evento
-            </p>
+            <h2 className="font-semibold flex items-center gap-2">
+              <FaBullseye className="text-pink-600" /> Objetivo e Meta
+            </h2>
 
-            <div className="space-y-4">
+            <textarea
+              name="goal"
+              value={form.goal}
+              onChange={handleChange}
+              className="w-full mt-3 p-3 bg-gray-100 rounded-lg"
+            />
 
-              <div>
-                <label className="flex items-center gap-2 text-sm">
-                  <FaBullseye className={iconPrimary} /> Objetivo *
-                </label>
-                <textarea
-                  name="goal"
-                  placeholder="Objetivo principal do evento..."
-                  className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
-                  onChange={handleChange}
-                />
-              </div>
+            <select
+              name="goalType"
+              value={form.goalType}
+              onChange={handleChange}
+              className="w-full mt-3 p-3 bg-gray-100 rounded-lg"
+            >
+              <option value="">Tipo de meta</option>
+              <option>Arrecadação</option>
+              <option>Pessoas</option>
+              <option>Itens</option>
+            </select>
 
-              <div>
-                <label className="flex items-center gap-2 text-sm">
-                  <FaChartLine className={iconSecondary} /> Tipo de Meta
-                </label>
-                <select
-                  name="goalType"
-                  className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
-                  onChange={handleChange}
-                >
-                  <option value="">Selecione</option>
-                  <option>Arrecadação</option>
-                  <option>Pessoas</option>
-                  <option>Itens</option>
-                </select>
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-4">
-                <input
-                  name="goalTotal"
-                  placeholder="Meta total"
-                  className="p-3 bg-gray-100 rounded-lg"
-                  onChange={handleChange}
-                />
-                <input
-                  name="goalCurrent"
-                  placeholder="Progresso atual"
-                  className="p-3 bg-gray-100 rounded-lg"
-                  onChange={handleChange}
-                />
-                <input
-                  name="goalUnit"
-                  placeholder="Unidade (kg, pessoas...)"
-                  className="p-3 bg-gray-100 rounded-lg"
-                  onChange={handleChange}
-                />
-              </div>
-
+            <div className="grid md:grid-cols-3 gap-4 mt-3">
+              <input name="goalTotal" value={form.goalTotal} onChange={handleChange} placeholder="Meta total" className="p-3 bg-gray-100 rounded-lg"/>
+              <input name="goalCurrent" value={form.goalCurrent} onChange={handleChange} placeholder="Progresso atual" className="p-3 bg-gray-100 rounded-lg"/>
+              <input name="goalUnit" value={form.goalUnit} onChange={handleChange} placeholder="Unidade" className="p-3 bg-gray-100 rounded-lg"/>
             </div>
           </div>
 
           {/* VOLUNTÁRIOS */}
           <div className="bg-white border rounded-xl p-6 shadow-sm">
-            <h2 className="font-semibold">Voluntários</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Defina quantas pessoas são necessárias
-            </p>
+            <h2 className="font-semibold flex items-center gap-2">
+              <FaUsers className="text-green-600" /> Voluntários
+            </h2>
 
-            <div className="space-y-4">
+            <input name="volunteers" value={form.volunteers} onChange={handleChange} className="w-full mt-3 p-3 bg-gray-100 rounded-lg"/>
 
-              <div>
-                <label className="flex items-center gap-2 text-sm">
-                  <FaUsers className={iconPrimary} /> Número de voluntários
-                </label>
-                <input
-                  name="volunteers"
-                  placeholder="Ex: 10"
-                  className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
-                  onChange={handleChange}
-                />
-              </div>
-
-              <textarea
-                name="volunteerProfile"
-                placeholder="Descreva o perfil desejado dos voluntários, habilidades necessárias, disponibilidade, etc.."
-                className="w-full p-3 bg-gray-100 rounded-lg"
-                onChange={handleChange}
-              />
-
-            </div>
+            <textarea name="volunteerProfile" value={form.volunteerProfile} onChange={handleChange} className="w-full mt-3 p-3 bg-gray-100 rounded-lg"/>
           </div>
 
           {/* CONTATO */}
           <div className="bg-white border rounded-xl p-6 shadow-sm">
             <h2 className="font-semibold">Contato</h2>
 
-            <div className="space-y-4 mt-4">
-              <div>
-                <label className="flex items-center gap-2 text-sm">
-                  <MdEmail className={iconSecondary} /> Email
-                </label>
-                <input
-                  name="email"
-                  placeholder="contato@email.com"
-                  className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
-                  onChange={handleChange}
-                />
-              </div>
-
-              <input
-                name="phone"
-                placeholder="Telefone"
-                className="w-full p-3 bg-gray-100 rounded-lg"
-                onChange={handleChange}
-              />
-
-              <input
-                name="whatsapp"
-                placeholder="WhatsApp"
-                className="w-full p-3 bg-gray-100 rounded-lg"
-                onChange={handleChange}
-              />
-            </div>
+            <input name="email" value={form.email} onChange={handleChange} className="w-full mt-3 p-3 bg-gray-100 rounded-lg"/>
+            <input name="phone" value={form.phone} onChange={handleChange} className="w-full mt-3 p-3 bg-gray-100 rounded-lg"/>
+            <input name="whatsapp" value={form.whatsapp} onChange={handleChange} className="w-full mt-3 p-3 bg-gray-100 rounded-lg"/>
           </div>
 
           {/* BOTÕES */}
           <div className="flex gap-4">
-            <button
-              type="submit"
-              className="flex-1 bg-pink-600 text-white py-3 rounded-lg"
-            >
-              Cadastrar Evento
+            <button className="flex-1 bg-pink-600 text-white py-3 rounded-lg">
+              {isEdit ? "Salvar Alterações" : "Cadastrar Evento"}
             </button>
 
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="flex-1 bg-gray-200 py-3 rounded-lg"
-            >
+            <button type="button" onClick={() => navigate("/")} className="flex-1 bg-gray-200 py-3 rounded-lg">
               Cancelar
             </button>
           </div>
 
           {/* DICAS */}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-sm">
-            <h3 className="font-semibold mb-2">
-              Dicas para um bom evento
-            </h3>
-            <ul className="list-disc ml-5 text-gray-600">
-              <li>Seja claro e específico sobre o objetivo do evento</li>
-              <li>Informe horários de início e término na descrição</li>
-              <li>Forneça múltiplas formas de contato para facilitar a comunicação</li>
-              <li>Defina metas realistas e acompanhe o progresso</li>
-              <li>Descreva bem o perfil dos voluntários para atrair as pessoas certas</li>
-              <li>Mencione se há estacionamento ou transporte público próximo</li>
+            <h3 className="font-semibold mb-2">💡 Dicas para um bom evento</h3>
+            <ul className="list-disc ml-5 text-gray-600 space-y-1">
+              <li>Seja claro e específico</li>
+              <li>Informe horários</li>
+              <li>Forneça contatos</li>
+              <li>Defina metas realistas</li>
+              <li>Descreva os voluntários</li>
             </ul>
           </div>
 

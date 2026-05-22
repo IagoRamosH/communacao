@@ -22,7 +22,7 @@ function AppRoutes() {
             </PrivateRoute>
           }
         />
-        <Route path="/evento/:id" element={<EventDetails />} />
+        <Route path="/event/:id" element={<EventDetails />} />
         <Route path="/cadastrar-evento" element={<CreateEvent />} />
       </Routes>
     </BrowserRouter>

@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 import Header from "../components/Header";
 import Navbar from "../components/Navbar";
+import { AuthContext } from "../context/AuthContext";
 
 import {
   FaArrowLeft,
@@ -18,9 +19,36 @@ import { MdEmail } from "react-icons/md";
 function EventDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // 🔥 PERMISSÃO (só calcula quando event existir)
+  const canEdit =
+    user &&
+    event &&
+    (user.role === "admin" || user.id === event.creator?._id);
+
+  // 🔴 DELETE
+  async function handleDelete() {
+    const confirmDelete = window.confirm("Deseja deletar este evento?");
+    if (!confirmDelete) return;
+
+    try {
+      await api.delete(`/events/${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      alert("Evento deletado com sucesso!");
+      navigate("/");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao deletar evento");
+    }
+  }
 
   useEffect(() => {
     async function fetchEvent() {
@@ -43,6 +71,24 @@ function EventDetails() {
   const percent = event.goalTotal
     ? (event.goalCurrent / event.goalTotal) * 100
     : 0;
+
+    async function handleDelete() {
+  const confirmDelete = window.confirm("Deseja deletar este evento?");
+  if (!confirmDelete) return;
+
+  try {
+    await api.delete(`/events/${id}`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+
+    navigate("/");
+  } catch (error) {
+    console.error(error);
+    alert("Erro ao deletar evento");
+  }
+}
 
   return (
     <>
@@ -67,7 +113,26 @@ function EventDetails() {
           </span>
         </div>
 
-        {/* GRID PRINCIPAL */}
+        {/* BOTÕES ADMIN/DONO */}
+        {canEdit && (
+          <div className="flex gap-3 mb-6">
+            <button
+              onClick={() => navigate(`/editar-evento/${id}`)}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg"
+            >
+              Editar Evento
+            </button>
+
+            <button
+              onClick={handleDelete}
+              className="bg-red-500 text-white px-4 py-2 rounded-lg"
+            >
+              Deletar Evento
+            </button>
+          </div>
+        )}
+
+        {/* GRID */}
         <div className="grid lg:grid-cols-3 gap-6">
 
           {/* ESQUERDA */}
@@ -139,7 +204,7 @@ function EventDetails() {
               </div>
             </div>
 
-            {/* FOTOS */}
+            
             <div className="bg-white border rounded-xl p-6 shadow-sm">
               <h2 className="font-semibold mb-4 text-orange-500">
                 Fotos do Evento
@@ -161,40 +226,8 @@ function EventDetails() {
               </div>
             </div>
 
-            {/* COMENTÁRIOS */}
-            <div className="bg-white border rounded-xl p-6 shadow-sm">
-              <h2 className="font-semibold mb-4">
-                Comentários dos Participantes
-              </h2>
-
-              <div className="space-y-4 mb-6">
-                {(event.comments || []).map((c, i) => (
-                  <div key={i} className="bg-gray-100 p-4 rounded-lg">
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <strong>{c.name}</strong>
-                      <span>{c.date}</span>
-                    </div>
-                    <p>{c.text}</p>
-                  </div>
-                ))}
-              </div>
-
-              <input
-                placeholder="Seu nome"
-                className="w-full mb-2 p-3 bg-gray-100 rounded-lg"
-              />
-
-              <textarea
-                placeholder="Compartilhe suas experiências..."
-                className="w-full mb-2 p-3 bg-gray-100 rounded-lg"
-              />
-
-              <button className="w-full bg-blue-600 text-white py-2 rounded-lg">
-                Publicar Comentário
-              </button>
-            </div>
-
           </div>
+
 
           {/* DIREITA */}
           <div className="space-y-6">
@@ -206,78 +239,29 @@ function EventDetails() {
               </h2>
 
               <div className="space-y-3">
-
-                <div>
-                  <label className="text-gray-500 text-xs">E-mail</label>
-                  <input
-                    value={event.email || ""}
-                    disabled
-                    className="w-full p-2 bg-gray-100 rounded-lg"
-                    placeholder="contato@exemplo.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-gray-500 text-xs">Telefone</label>
-                  <input
-                    value={event.phone || ""}
-                    disabled
-                    className="w-full p-2 bg-gray-100 rounded-lg"
-                    placeholder="(00) 0000-0000"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-gray-500 text-xs">WhatsApp</label>
-                  <input
-                    value={event.whatsapp || ""}
-                    disabled
-                    className="w-full p-2 bg-gray-100 rounded-lg"
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-
+                <input value={event.email || ""} disabled className="w-full p-2 bg-gray-100 rounded-lg" placeholder="Email" />
+                <input value={event.phone || ""} disabled className="w-full p-2 bg-gray-100 rounded-lg" placeholder="Telefone" />
+                <input value={event.whatsapp || ""} disabled className="w-full p-2 bg-gray-100 rounded-lg" placeholder="WhatsApp" />
               </div>
             </div>
 
             {/* VOLUNTÁRIOS */}
             <div className="bg-green-50 border rounded-xl p-6">
-
               <h2 className="font-semibold text-green-700 mb-2 flex items-center gap-2">
                 <FaUsers /> Voluntários
               </h2>
 
               <p className="text-green-600 font-medium mb-3">
-                {event.volunteers ?? 0} vaga(s) disponível(is)
+                {event.volunteers ?? 0} vaga(s)
               </p>
 
-              <p className="text-sm mb-4 text-gray-600">
-                {event.volunteerProfile || "Nenhuma descrição informada."}
-              </p>
+              <input placeholder="Seu nome" className="w-full p-2 mb-2 border rounded-lg" />
+              <input placeholder="E-mail" className="w-full p-2 mb-2 border rounded-lg" />
+              <input placeholder="Telefone" className="w-full p-2 mb-2 border rounded-lg" />
 
-              <div className="space-y-3">
-
-                <input
-                  placeholder="Seu nome"
-                  className="w-full p-3 bg-white rounded-lg border"
-                />
-
-                <input
-                  placeholder="E-mail"
-                  className="w-full p-3 bg-white rounded-lg border"
-                />
-
-                <input
-                  placeholder="Telefone"
-                  className="w-full p-3 bg-white rounded-lg border"
-                />
-
-              </div>
-
-              <button className="w-full mt-4 bg-green-600 text-white py-2 rounded-lg">
+              <button className="w-full mt-2 bg-green-600 text-white py-2 rounded-lg">
                 Candidatar-se
               </button>
-
             </div>
 
           </div>
