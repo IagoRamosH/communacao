@@ -5,21 +5,49 @@ exports.createEvent = async (req, res) => {
   try {
     const event = await Event.create({
       ...req.body,
-
-      // 🔥 CORREÇÃO AQUI
-      date: req.body.startDate || req.body.date,
-
       creator: req.user.id,
     });
 
     res.status(201).json(event);
-
   } catch (error) {
-    console.error("ERRO AO CRIAR EVENTO:", error);
-
     res.status(500).json({
       message: "Erro ao criar evento",
       error: error.message,
+    });
+  }
+};
+
+// 🔹 LISTAR EVENTOS
+exports.getEvents = async (req, res) => {
+  try {
+    const events = await Event.find()
+      .populate("creator", "name email");
+
+    res.json(events);
+  } catch (error) {
+    res.status(500).json({
+      message: "Erro ao buscar eventos",
+    });
+  }
+};
+
+// 🔹 BUSCAR POR ID
+exports.getEventById = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id)
+      .populate("creator", "name email")
+      .populate("participants", "name email");
+
+    if (!event) {
+      return res.status(404).json({
+        message: "Evento não encontrado",
+      });
+    }
+
+    res.json(event);
+  } catch (error) {
+    res.status(500).json({
+      message: "Erro ao buscar evento",
     });
   }
 };
@@ -32,7 +60,6 @@ exports.getMyEvents = async (req, res) => {
     });
 
     res.json(events);
-
   } catch (error) {
     res.status(500).json({
       message: "Erro ao buscar eventos",
@@ -40,26 +67,10 @@ exports.getMyEvents = async (req, res) => {
   }
 };
 
-// 🔹 LISTAR TODOS
-exports.getEvents = async (req, res) => {
+// 🔥 NOVO: PARTICIPAR DO EVENTO
+exports.participateEvent = async (req, res) => {
   try {
-    const events = await Event.find()
-      .populate("creator", "name email");
-
-    res.json(events);
-
-  } catch (error) {
-    res.status(500).json({
-      message: "Erro ao buscar eventos",
-    });
-  }
-};
-
-// 🔹 BUSCAR POR ID
-exports.getEventById = async (req, res) => {
-  try {
-    const event = await Event.findById(req.params.id)
-      .populate("creator", "name email");
+    const event = await Event.findById(req.params.id);
 
     if (!event) {
       return res.status(404).json({
@@ -67,11 +78,24 @@ exports.getEventById = async (req, res) => {
       });
     }
 
-    res.json(event);
+    // 🔒 evitar duplicação
+    if (event.participants.includes(req.user.id)) {
+      return res.status(400).json({
+        message: "Você já está participando deste evento",
+      });
+    }
+
+    event.participants.push(req.user.id);
+    await event.save();
+
+    res.json({
+      message: "Participação confirmada",
+      participants: event.participants.length,
+    });
 
   } catch (error) {
     res.status(500).json({
-      message: "Erro ao buscar evento",
+      message: "Erro ao participar do evento",
     });
   }
 };
@@ -87,7 +111,6 @@ exports.deleteEvent = async (req, res) => {
       });
     }
 
-    // 🔥 ADMIN OU DONO
     if (
       event.creator.toString() !== req.user.id &&
       req.user.role !== "admin"
@@ -100,7 +123,7 @@ exports.deleteEvent = async (req, res) => {
     await event.deleteOne();
 
     res.json({
-      message: "Evento removido com sucesso",
+      message: "Evento removido",
     });
 
   } catch (error) {

@@ -1,20 +1,14 @@
 const express = require("express");
 const router = express.Router();
 
-// 🔹 Controllers
-const {
-  createEvent,
-  getEvents,
-  getEventById,
-  getMyEvents,
-  deleteEvent,
-} = require("../controllers/eventController");
+// 🔹 IMPORT CORRETO DO CONTROLLER
+const eventController = require("../controllers/eventController");
 
-// 🔹 Middlewares
+// 🔹 IMPORT CORRETO DO MIDDLEWARE
 const { auth } = require("../middleware/authMiddleware");
 const canEditEvent = require("../middleware/canEditEvent");
 
-// 🔥 NOVO: middleware para permitir apenas organizadores/admin
+// 🔥 Middleware: apenas organizer/admin criam eventos
 const isOrganizer = (req, res, next) => {
   if (req.user.role !== "organizer" && req.user.role !== "admin") {
     return res.status(403).json({
@@ -24,19 +18,22 @@ const isOrganizer = (req, res, next) => {
   next();
 };
 
-// 🔹 CRIAR EVENTO (AGORA COM REGRA)
-router.post("/", auth, isOrganizer, createEvent);
+// 🔹 CRIAR EVENTO
+router.post("/", auth, isOrganizer, eventController.createEvent);
 
-// 🔹 MEUS EVENTOS (ANTES DO :id ⚠️)
-router.get("/my-events", auth, getMyEvents);
+// 🔥 PARTICIPAR DO EVENTO
+router.post("/:id/participate", auth, eventController.participateEvent);
 
-// 🔹 LISTAR TODOS EVENTOS
-router.get("/", getEvents);
+// 🔹 MEUS EVENTOS
+router.get("/my-events", auth, eventController.getMyEvents);
 
-// 🔹 BUSCAR EVENTO POR ID
-router.get("/:id", getEventById);
+// 🔹 LISTAR
+router.get("/", eventController.getEvents);
 
-// 🔹 EDITAR EVENTO
+// 🔹 BUSCAR
+router.get("/:id", eventController.getEventById);
+
+// 🔹 EDITAR
 router.put("/:id", auth, canEditEvent, async (req, res) => {
   try {
     const Event = require("../models/Event");
@@ -49,11 +46,13 @@ router.put("/:id", auth, canEditEvent, async (req, res) => {
 
     res.json(updatedEvent);
   } catch (error) {
-    res.status(500).json({ message: "Erro ao atualizar evento" });
+    res.status(500).json({
+      message: "Erro ao atualizar evento",
+    });
   }
 });
 
-// 🔹 DELETAR EVENTO
-router.delete("/:id", auth, canEditEvent, deleteEvent);
+// 🔹 DELETAR
+router.delete("/:id", auth, canEditEvent, eventController.deleteEvent);
 
 module.exports = router;

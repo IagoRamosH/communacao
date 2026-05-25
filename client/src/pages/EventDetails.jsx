@@ -23,6 +23,7 @@ function EventDetails() {
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isParticipating, setIsParticipating] = useState(false);
 
   // 🔥 PERMISSÃO (só calcula quando event existir)
   const canEdit =
@@ -54,7 +55,20 @@ function EventDetails() {
     async function fetchEvent() {
       try {
         const response = await api.get(`/events/${id}`);
-        setEvent(response.data);
+
+        const data = response.data;
+
+        setEvent(data);
+
+        // 🔥 verificar se usuário já participa
+        if (data.participants && user) {
+          const alreadyIn = data.participants.some(
+            (p) => p._id === user.id
+          );
+
+          setIsParticipating(alreadyIn);
+        }
+
       } catch (error) {
         console.error("Erro ao buscar evento", error);
       } finally {
@@ -63,7 +77,7 @@ function EventDetails() {
     }
 
     fetchEvent();
-  }, [id]);
+  }, [id, user]);
 
   if (loading) return <p className="p-8">Carregando...</p>;
   if (!event) return <p className="p-8">Evento não encontrado</p>;
@@ -72,23 +86,21 @@ function EventDetails() {
     ? (event.goalCurrent / event.goalTotal) * 100
     : 0;
 
-    async function handleDelete() {
-  const confirmDelete = window.confirm("Deseja deletar este evento?");
-  if (!confirmDelete) return;
+ 
 
-  try {
-    await api.delete(`/events/${id}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    });
+  async function handleParticipate() {
+    try {
+      await api.post(`/events/${id}/participate`);
 
-    navigate("/");
-  } catch (error) {
-    console.error(error);
-    alert("Erro ao deletar evento");
+      alert("Você está participando do evento!");
+
+      setIsParticipating(true);
+
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || "Erro ao participar");
+    }
   }
-}
 
   return (
     <>
@@ -245,24 +257,17 @@ function EventDetails() {
               </div>
             </div>
 
-            {/* VOLUNTÁRIOS */}
-            <div className="bg-green-50 border rounded-xl p-6">
-              <h2 className="font-semibold text-green-700 mb-2 flex items-center gap-2">
-                <FaUsers /> Voluntários
-              </h2>
-
-              <p className="text-green-600 font-medium mb-3">
-                {event.volunteers ?? 0} vaga(s)
-              </p>
-
-              <input placeholder="Seu nome" className="w-full p-2 mb-2 border rounded-lg" />
-              <input placeholder="E-mail" className="w-full p-2 mb-2 border rounded-lg" />
-              <input placeholder="Telefone" className="w-full p-2 mb-2 border rounded-lg" />
-
-              <button className="w-full mt-2 bg-green-600 text-white py-2 rounded-lg">
-                Candidatar-se
-              </button>
-            </div>
+            <button
+              onClick={handleParticipate}
+              disabled={isParticipating}
+              className={`w-full mt-4 py-3 rounded-lg text-white ${
+                isParticipating
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-pink-600 hover:bg-pink-700"
+              }`}
+            >
+              {isParticipating ? "Você já está participando" : "Participar do Evento"}
+            </button>
 
           </div>
 
