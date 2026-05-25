@@ -6,6 +6,9 @@ import Register from "../pages/Register";
 import PrivateRoute from "./PrivateRoute";
 import EventDetails from "../pages/EventDetails";
 import CreateEvent from "../pages/CreateEvent";
+import Perfil from "../pages/Perfil";
+import Expirados from "../pages/Expirados";
+import Denuncias from "../pages/Denuncias";
 
 function AppRoutes() {
   return (
@@ -23,7 +26,39 @@ function AppRoutes() {
           }
         />
         <Route path="/event/:id" element={<EventDetails />} />
-        <Route path="/cadastrar-evento" element={<CreateEvent />} />
+        <Route
+          path="/editar-evento/:id"
+          element={
+            <PrivateRoute>
+              <CreateEvent />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/cadastrar-evento"
+          element={
+            <PrivateRoute>
+              <CreateEvent />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/perfil"
+          element={
+            <PrivateRoute>
+              <Perfil />
+            </PrivateRoute>
+          }
+        />
+        <Route path="/expirados" element={<Expirados />} />
+        <Route
+          path="/denuncias"
+          element={
+            <PrivateRoute>
+              <Denuncias />
+            </PrivateRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

@@ -1,57 +1,65 @@
 const mongoose = require("mongoose");
 
-const memberSchema = new mongoose.Schema({
-  name: String,
-  email: String,
-  phone: String,
-});
+const affiliateSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    addedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+);
 
+// Guarda dados de acesso, perfil e informacoes de aprovacao da organizacao.
 const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
       required: true,
+      trim: true,
     },
-
     email: {
       type: String,
       required: true,
       unique: true,
+      lowercase: true,
+      trim: true,
     },
-
     password: {
       type: String,
       required: true,
+      minlength: 6,
     },
-
-    // 🔹 TIPOS DE CONTA
     role: {
       type: String,
-      enum: ["user", "organizer", "admin"],
+      enum: ["user", "organization", "organizer", "admin"],
       default: "user",
     },
-
-    // 🔹 SE É UMA ORGANIZAÇÃO
-    isOrganization: {
-      type: Boolean,
-      default: false,
-    },
-
-    // 🔹 STATUS DA ORGANIZAÇÃO
-    status: {
-      type: String,
-      enum: ["pending", "approved"],
-      default: "approved",
-    },
-
-    // 🔹 NOME DA ORGANIZAÇÃO
     organizationName: {
       type: String,
       default: null,
+      trim: true,
     },
-
-    // 🔹 MEMBROS DA ORGANIZAÇÃO
-    members: [memberSchema],
+    organizationStatus: {
+      type: String,
+      enum: ["none", "eligible", "pending", "approved", "rejected"],
+      default: "none",
+    },
+    organizationApprovedAt: {
+      type: Date,
+      default: null,
+    },
+    organizationApprovedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    affiliates: [affiliateSchema],
   },
   {
     timestamps: true,

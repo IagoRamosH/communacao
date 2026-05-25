@@ -18,6 +18,23 @@ import { MdEmail, MdDescription } from "react-icons/md";
 
 import api from "../services/api";
 
+const CITIES = [
+  "Campina Grande",
+  "Joao Pessoa",
+  "Patos",
+  "Sousa",
+  "Cajazeiras",
+  "Guarabira",
+  "Santa Rita",
+  "Bayeux",
+  "Cabedelo",
+  "Queimadas",
+  "Esperanca",
+  "Lagoa Seca",
+];
+
+const emptyImages = ["", "", "", ""];
+
 function CreateEvent() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -40,7 +57,8 @@ function CreateEvent() {
     volunteerProfile: "",
     email: "",
     phone: "",
-    whatsapp: ""
+    whatsapp: "",
+    images: emptyImages,
   });
 
   useEffect(() => {
@@ -67,7 +85,8 @@ function CreateEvent() {
             volunteerProfile: data.volunteerProfile || "",
             email: data.email || "",
             phone: data.phone || "",
-            whatsapp: data.whatsapp || ""
+            whatsapp: data.whatsapp || "",
+            images: [...(data.images || []), ...emptyImages].slice(0, 4),
           });
         } catch (error) {
           console.error("Erro ao carregar evento", error);
@@ -80,6 +99,12 @@ function CreateEvent() {
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
+  }
+
+  function handleImageChange(index, value) {
+    const images = [...form.images];
+    images[index] = value;
+    setForm({ ...form, images });
   }
 
   async function handleSubmit(e) {
@@ -99,8 +124,19 @@ function CreateEvent() {
         },
       };
 
+      const images = form.images
+        .map((image) => image.trim())
+        .filter(Boolean);
+
+      if (images.length < 4) {
+        alert("Adicione pelo menos 4 fotos do evento");
+        return;
+      }
+
       const payload = {
         ...form,
+        images,
+        image: images[0],
         goalTotal: Number(form.goalTotal) || 0,
         goalCurrent: Number(form.goalCurrent) || 0,
         volunteers: Number(form.volunteers) || 0,
@@ -114,8 +150,13 @@ function CreateEvent() {
 
       navigate("/");
     } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Erro ao salvar evento";
+
       console.error("Erro ao salvar evento:", error.response?.data || error);
-      alert("Erro ao salvar evento");
+      alert(message);
     }
   }
 
@@ -215,12 +256,19 @@ function CreateEvent() {
                 <label className="flex items-center gap-2 text-sm">
                   <FaMapMarkerAlt className={iconPrimary} /> Local *
                 </label>
-                <input
+                <select
                   name="location"
                   value={form.location}
                   onChange={handleChange}
                   className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
-                />
+                >
+                  <option value="">Selecione uma cidade</option>
+                  {CITIES.map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -294,6 +342,30 @@ function CreateEvent() {
             <input name="volunteers" value={form.volunteers} onChange={handleChange} className="w-full mt-3 p-3 bg-gray-100 rounded-lg"/>
 
             <textarea name="volunteerProfile" value={form.volunteerProfile} onChange={handleChange} className="w-full mt-3 p-3 bg-gray-100 rounded-lg"/>
+          </div>
+
+          {/* FOTOS */}
+          <div className="bg-white border rounded-xl p-6 shadow-sm">
+            <h2 className="font-semibold">Fotos do Evento *</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Adicione 4 links de fotos para aparecerem nos detalhes do evento.
+            </p>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {form.images.map((image, index) => (
+                <div key={index}>
+                  <label className="text-sm font-medium">
+                    Foto {index + 1} *
+                  </label>
+                  <input
+                    value={image}
+                    onChange={(e) => handleImageChange(index, e.target.value)}
+                    placeholder="https://exemplo.com/foto.jpg"
+                    className="w-full mt-1 p-3 bg-gray-100 rounded-lg"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* CONTATO */}

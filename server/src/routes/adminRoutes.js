@@ -1,65 +1,22 @@
 const express = require("express");
 const router = express.Router();
+const adminController = require("../controllers/adminController");
+const userController = require("../controllers/userController");
+const reportController = require("../controllers/reportController");
+const { auth, isAdmin } = require("../middleware/authMiddleware");
 
-const User = require("../models/User");
+// Rotas administrativas: usuarios, aprovacao de organizacao, voluntarios e auditoria.
+router.use(auth, isAdmin);
 
-// 🔐 Middleware
-const { auth } = require("../middleware/authMiddleware");
-
-// 🔥 Middleware simples de admin
-function isAdmin(req, res, next) {
-  if (req.user.role !== "admin") {
-    return res.status(403).json({
-      message: "Acesso restrito a administradores",
-    });
-  }
-  next();
-}
-
-// 🔹 LISTAR TODOS OS USUÁRIOS
-router.get("/users", auth, isAdmin, async (req, res) => {
-  try {
-    const users = await User.find().select("-password");
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({
-      message: "Erro ao buscar usuários",
-    });
-  }
-});
-
-// 🔹 PROMOVER PARA ORGANIZER
-router.put("/users/:id/promote-organizer", auth, isAdmin, async (req, res) => {
-  try {
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { role: "organizer" },
-      { new: true }
-    ).select("-password");
-
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({
-      message: "Erro ao promover usuário",
-    });
-  }
-});
-
-// 🔹 PROMOVER PARA ADMIN
-router.put("/users/:id/promote-admin", auth, isAdmin, async (req, res) => {
-  try {
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { role: "admin" },
-      { new: true }
-    ).select("-password");
-
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({
-      message: "Erro ao promover usuário",
-    });
-  }
-});
+router.get("/users", userController.getUsers);
+router.post("/users", userController.createUser);
+router.get("/users/:id", userController.getUserById);
+router.put("/users/:id", userController.updateUser);
+router.delete("/users/:id", userController.deleteUser);
+router.put("/users/:id/approve-organization", adminController.approveOrganization);
+router.put("/users/:id/reject-organization", adminController.rejectOrganization);
+router.get("/events/:eventId/volunteers", adminController.getVolunteersByEvent);
+router.get("/audit-logs", adminController.getAuditLogs);
+router.get("/reports", reportController.getReports);
 
 module.exports = router;
