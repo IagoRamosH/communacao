@@ -1,74 +1,60 @@
 import { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
-
 import Header from "../components/Header";
 import Navbar from "../components/Navbar";
 import { AuthContext } from "../context/AuthContext";
-
 import {
   FaArrowLeft,
   FaCalendarAlt,
   FaMapMarkerAlt,
   FaUser,
-  FaUsers,
 } from "react-icons/fa";
 
-import { MdEmail } from "react-icons/md";
+function getId(value) {
+  if (!value) return "";
+  return value._id || value.id || value;
+}
+
+function userIsInEvent(event, user) {
+  if (!event || !user) return false;
+
+  const inParticipants = event.participants?.some(
+    (participant) => getId(participant) === user.id
+  );
+
+  const inParticipations = event.participations?.some(
+    (participation) => getId(participation.user) === user.id
+  );
+
+  return Boolean(inParticipants || inParticipations);
+}
 
 function EventDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isParticipating, setIsParticipating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  // 🔥 PERMISSÃO (só calcula quando event existir)
-  const canEdit =
-    user &&
-    event &&
-    (user.role === "admin" || user.id === event.creator?._id);
+  const creatorId = getId(event?.creator);
+  const isCreator = Boolean(user && creatorId && user.id === creatorId);
+  const canEdit = Boolean(user && event && (user.role === "admin" || isCreator));
 
-  // 🔴 DELETE
-  async function handleDelete() {
-    const confirmDelete = window.confirm("Deseja deletar este evento?");
-    if (!confirmDelete) return;
+  async function loadEvent() {
+    const response = await api.get(`/events/${id}`);
+    const data = response.data;
 
-    try {
-      await api.delete(`/events/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      alert("Evento deletado com sucesso!");
-      navigate("/");
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao deletar evento");
-    }
+    setEvent(data);
+    setIsParticipating(userIsInEvent(data, user));
   }
 
   useEffect(() => {
     async function fetchEvent() {
       try {
-        const response = await api.get(`/events/${id}`);
-
-        const data = response.data;
-
-        setEvent(data);
-
-        // 🔥 verificar se usuário já participa
-        if (data.participants && user) {
-          const alreadyIn = data.participants.some(
-            (p) => p._id === user.id
-          );
-
-          setIsParticipating(alreadyIn);
-        }
-
+        await loadEvent();
       } catch (error) {
         console.error("Erro ao buscar evento", error);
       } finally {
@@ -79,28 +65,59 @@ function EventDetails() {
     fetchEvent();
   }, [id, user]);
 
-  if (loading) return <p className="p-8">Carregando...</p>;
-  if (!event) return <p className="p-8">Evento não encontrado</p>;
+  async function handleDelete() {
+    const confirmDelete = window.confirm("Deseja deletar este evento?");
+    if (!confirmDelete) return;
 
-  const percent = event.goalTotal
-    ? (event.goalCurrent / event.goalTotal) * 100
-    : 0;
-
- 
+    try {
+      await api.delete(`/events/${id}`);
+      alert("Evento deletado com sucesso!");
+      navigate("/");
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || "Erro ao deletar evento");
+    }
+  }
 
   async function handleParticipate() {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    if (isCreator) {
+      alert("Voce criou este evento.");
+      return;
+    }
+
     try {
+      setSubmitting(true);
       await api.post(`/events/${id}/participate`);
-
-      alert("Você está participando do evento!");
-
-      setIsParticipating(true);
-
+      await loadEvent();
+      alert("Voce esta participando do evento!");
     } catch (error) {
       console.error(error);
       alert(error.response?.data?.message || "Erro ao participar");
+    } finally {
+      setSubmitting(false);
     }
   }
+
+  if (loading) return <p className="p-8">Carregando...</p>;
+  if (!event) return <p className="p-8">Evento nao encontrado</p>;
+
+  const percent = event.goalTotal
+    ? Math.min((event.goalCurrent / event.goalTotal) * 100, 100)
+    : 0;
+
+  const buttonDisabled = isParticipating || submitting || isCreator;
+  const buttonText = isCreator
+    ? "Voce criou este evento"
+    : isParticipating
+      ? "Voce ja esta participando"
+      : submitting
+        ? "Confirmando..."
+        : "Participar do Evento";
 
   return (
     <>
@@ -108,24 +125,16 @@ function EventDetails() {
       <Navbar />
 
       <section className="max-w-6xl mx-auto px-6 py-8 text-sm">
-
-        {/* HEADER */}
         <div className="flex items-center gap-3 mb-6">
-          <FaArrowLeft
-            className="cursor-pointer"
-            onClick={() => navigate("/")}
-          />
+          <FaArrowLeft className="cursor-pointer" onClick={() => navigate("/")} />
 
-          <h1 className="text-2xl font-bold text-pink-600">
-            {event.title}
-          </h1>
+          <h1 className="text-2xl font-bold text-pink-600">{event.title}</h1>
 
           <span className="ml-auto bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-xs">
             {event.category || "Categoria"}
           </span>
         </div>
 
-        {/* BOTÕES ADMIN/DONO */}
         {canEdit && (
           <div className="flex gap-3 mb-6">
             <button
@@ -144,28 +153,23 @@ function EventDetails() {
           </div>
         )}
 
-        {/* GRID */}
         <div className="grid lg:grid-cols-3 gap-6">
-
-          {/* ESQUERDA */}
           <div className="lg:col-span-2 space-y-6">
-
-            {/* INFORMAÇÕES */}
             <div className="bg-white border rounded-xl p-6 shadow-sm">
               <h2 className="font-semibold mb-4 flex items-center gap-2">
                 <FaCalendarAlt className="text-pink-600" />
-                Informações do Evento
+                Informacoes do Evento
               </h2>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-500">Data de Início</p>
-                  <p>{event.startDate || event.date || "Não informado"}</p>
+                  <p className="text-gray-500">Data de Inicio</p>
+                  <p>{event.startDate || event.date || "Nao informado"}</p>
                 </div>
 
                 <div>
-                  <p className="text-gray-500">Data de Término</p>
-                  <p>{event.endDate || "Não informado"}</p>
+                  <p className="text-gray-500">Data de Termino</p>
+                  <p>{event.endDate || "Nao informado"}</p>
                 </div>
               </div>
 
@@ -175,7 +179,7 @@ function EventDetails() {
                 <FaMapMarkerAlt className="text-pink-600" />
                 Local
               </p>
-              <p>{event.location || "Não informado"}</p>
+              <p>{event.location || "Nao informado"}</p>
 
               <hr className="my-4" />
 
@@ -183,19 +187,16 @@ function EventDetails() {
                 <FaUser className="text-pink-600" />
                 Organizador
               </p>
-              <p>{event.organizer || "Não informado"}</p>
+              <p>{event.organizer || event.creator?.name || "Nao informado"}</p>
 
               <hr className="my-4" />
 
-              <p className="text-gray-500">Descrição</p>
-              <p>{event.description || "Sem descrição disponível"}</p>
+              <p className="text-gray-500">Descricao</p>
+              <p>{event.description || "Sem descricao disponivel"}</p>
             </div>
 
-            {/* OBJETIVO */}
             <div className="bg-white border rounded-xl p-6 shadow-sm">
-              <h2 className="font-semibold mb-4 text-pink-600">
-                Objetivo e Meta
-              </h2>
+              <h2 className="font-semibold mb-4 text-pink-600">Objetivo e Meta</h2>
 
               <p className="mb-4 text-gray-700">
                 {event.goal || "Nenhum objetivo definido"}
@@ -216,39 +217,32 @@ function EventDetails() {
               </div>
             </div>
 
-            
             <div className="bg-white border rounded-xl p-6 shadow-sm">
               <h2 className="font-semibold mb-4 text-orange-500">
                 Fotos do Evento
               </h2>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid md:grid-cols-2 gap-4">
                 {(event.images?.length ? event.images : [
                   "https://via.placeholder.com/300",
                   "https://via.placeholder.com/300",
                   "https://via.placeholder.com/300",
-                ]).map((img, i) => (
+                  "https://via.placeholder.com/300",
+                ]).map((img, index) => (
                   <img
-                    key={i}
+                    key={`${img}-${index}`}
                     src={img}
                     alt="evento"
-                    className="h-40 w-full object-cover rounded-lg"
+                    className="h-44 w-full object-cover rounded-lg"
                   />
                 ))}
               </div>
             </div>
-
           </div>
 
-
-          {/* DIREITA */}
           <div className="space-y-6">
-
-            {/* CONTATO */}
             <div className="bg-white border rounded-xl p-6 shadow-sm">
-              <h2 className="font-semibold mb-4 text-pink-600">
-                Contato
-              </h2>
+              <h2 className="font-semibold mb-4 text-pink-600">Contato</h2>
 
               <div className="space-y-3">
                 <input value={event.email || ""} disabled className="w-full p-2 bg-gray-100 rounded-lg" placeholder="Email" />
@@ -259,20 +253,17 @@ function EventDetails() {
 
             <button
               onClick={handleParticipate}
-              disabled={isParticipating}
+              disabled={buttonDisabled}
               className={`w-full mt-4 py-3 rounded-lg text-white ${
-                isParticipating
+                buttonDisabled
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-pink-600 hover:bg-pink-700"
               }`}
             >
-              {isParticipating ? "Você já está participando" : "Participar do Evento"}
+              {buttonText}
             </button>
-
           </div>
-
         </div>
-
       </section>
     </>
   );

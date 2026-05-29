@@ -296,16 +296,30 @@ exports.participateEvent = async (req, res) => {
     }
 
     const kind = req.body.kind === "volunteer" ? "volunteer" : "participant";
-    const participation = await Participation.create({
+    let participation = await Participation.findOne({
       event: event._id,
       user: req.user._id,
-      kind,
     });
 
-    if (!event.participants.some((id) => id.toString() === req.user._id.toString())) {
-      event.participants.push(req.user._id);
-      await event.save();
+    if (participation?.status === "confirmed") {
+      return res.status(400).json({ message: "Voce ja esta participando deste evento" });
     }
+
+    if (participation) {
+      participation.kind = kind;
+      participation.status = "confirmed";
+      await participation.save();
+    } else {
+      participation = await Participation.create({
+        event: event._id,
+        user: req.user._id,
+        kind,
+      });
+    }
+
+    await Event.findByIdAndUpdate(event._id, {
+      $addToSet: { participants: req.user._id },
+    });
 
     await User.findByIdAndUpdate(event.creator, {
       $addToSet: { affiliates: { user: req.user._id } },
@@ -324,6 +338,10 @@ exports.participateEvent = async (req, res) => {
     res.status(201).json({
       message: "Participacao confirmada",
       participation,
+      participantsCount: await Participation.countDocuments({
+        event: event._id,
+        status: "confirmed",
+      }),
     });
   } catch (error) {
     if (error.code === 11000) {
